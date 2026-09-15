@@ -1,0 +1,10 @@
+{
+  "name": "fabrica-de-salgados",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'static site - no build needed'"
+  },
+  "description": "Fabrica de Salgados PWA"
+}

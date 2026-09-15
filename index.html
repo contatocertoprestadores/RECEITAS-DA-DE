@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E85D26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Fábrica de Salgados - Transforme seus salgados em um negócio lucrativo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={ theme: { extend: { fontFamily: { display:['Playfair Display','serif'], sans:['Inter','sans-serif'] }, colors: { brand:'#E85D26' } } } }
+</script>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-512.png">
+<style>
+*{-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',system-ui,sans-serif;background:#FFF9F0;max-width:100vw;overflow-x:hidden}
+.font-display{font-family:'Playfair Display',serif}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+
+// ===== TIPOS =====
+type Ingrediente = { nome: string; qtd: number; unidade: string; categoria: string };
+type Receita = {
+  id: string;
+  nome: string;
+  categoria: string;
+  emoji: string;
+  gradiente: string;
+  descricao: string;
+  rendimento: number;
+  tempo: string;
+  dificuldade: string;
+  ingredientes: Ingrediente[];
+  modoPreparo: string[];
+  montagem: string;
+  fritura: string;
+  dicasProducao: string;
+  dicasVenda: string;
+  conservacao: string;
+  validade: string;
+  vegetariano: boolean;
+  gourmet: boolean;
+  paraVenda: boolean;
+  tipo: 'frito' | 'assado';
+};
+
+type Pedido = {
+  id: string;
+  nome: string;
+  whatsapp: string;
+  data: string;
+  comprovanteBase64: string;
+  comprovanteNome: string;
+  comprovanteTipo: string;
+  status: 'pendente' | 'liberado';
+};
+
+// ===== GERAR 100 RECEITAS =====
+const categorias = [
+  "Salgados tradicionais",
+  "Fritos",
+  "Assados",
+  "Gourmet",
+  "Vegetarianos",
+  "Para festas",
+  "Mini salgados",
+  "Econômicos",
+  "Para vender",
+  "Especiais",
+];
+
+const nomesPorCategoria: Record<string, string[]> = {
+  "Salgados tradicionais": ["Coxinha de Frango", "Risoles de Carne", "Bolinha de Queijo", "Kibe Clássico", "Esfirra de Carne", "Pastel de Queijo", "Enroladinho de Salsicha", "Croquete de Carne", "Bolinha de Calabresa", "Pastel de Frango Cremoso"],
+  "Fritos": ["Coxinha Crocante Extra", "Bolinho de Aipim com Carne", "Pastel Frito Gigante", "Bolinha de Arancini", "Kibe Frito Recheado", "Churros Salgado", "Bolinho de Feijoada", "Coxinha de Jaca", "Bolinho de Bacalhau", "Travesseirinho de Camarão"],
+  "Assados": ["Esfirra de Frango Assada", "Empada de Palmito", "Joelho de Queijo e Presunto", "Enroladinho de Queijo Assado", "Esfirra Folhada", "Hambúrguer Assado", "Pastel de Forno Integral", "Bauru de Forno", "Torta de Frango de Copinho", "Pão de Batata Recheado"],
+  "Gourmet": ["Coxinha de Costela com Cheddar", "Arancini de Risoto Negro", "Croquete de Pato Confit", "Esfirra de Cordeiro", "Empada de Camarão VG", "Quiche Lorraine Mini", "Bolinha de Brie com Damasco", "Kibe de Pinhão", "Pastel de Lagosta", "Coxinha de Trufas"],
+  "Vegetarianos": ["Coxinha de Jaca Veg", "Kibe de Abóbora", "Bolinha de Grão de Bico", "Esfirra de Escarola", "Pastel de Palmito", "Bolinho de Couve-Flor", "Empada de Legumes", "Croquete de Lentilha", "Risoles de Espinafre", "Enroladinho de Tofu"],
+  "Para festas": ["Mini Coxinha Festa", "Bolinha de Queijo Festa", "Mini Kibe Festa", "Mini Esfirra Aberta", "Mini Pastel Colorido", "Canapé de Frango", "Vol-au-vent de Camarão", "Barquete de Maionese", "Cestinha de Festa", "Cone Salgado Recheado"],
+  "Mini salgados": ["Mini Coxinha 15g", "Mini Risoles 15g", "Mini Bolinha 12g", "Mini Pastel 20g", "Mini Esfirra 18g", "Mini Empada 20g", "Mini Kibe 15g", "Mini Enroladinho 15g", "Mini Croquete 12g", "Mini Churros Salgado"],
+  "Econômicos": ["Coxinha Econômica", "Risoles de Soja", "Bolinha de Batata", "Kibe de Arroz", "Pastel de Vento Recheado", "Enroladinho Econômico", "Empada de Massa Podre Barata", "Bolinho de Milho", "Esfirra de Massa de Pão", "Pão com Carne Moída"],
+  "Para vender": ["Coxinha 100g Lucrativa", "Pastel de Feira 120g", "Kibe Recheado 90g", "Bolinha Gourmet para Venda", "Empadão de Frango Fatia", "Enroladinho para Lanche", "Esfirra Fechada 80g", "Hambúrguer Caseiro 110g", "Pão de Queijo Recheado", "Croquete de Calabresa 80g"],
+  "Especiais": ["Coxinha sem Glúten", "Salgado Low Carb", "Coxinha Fit de Batata Doce", "Esfirra Integral", "Pastel Assado sem Lactose", "Kibe de Quinoa", "Empada Vegana", "Bolinha de Inhame", "Risoles sem Ovo", "Chipa Paraguaia"],
+};
+
+const emojis = ["🥟","🧀","🔥","✨","🌱","🎉","🤏","💰","🚀","⭐","🥐","🍗","🥧","🌮"];
+const gradientes = [
+  "from-[#FFE6C7] to-[#FFC38A]",
+  "from-[#FFD6BA] to-[#FF9F6E]",
+  "from-[#FFF1C6] to-[#C6A86A]",
+  "from-[#FFE0D6] to-[#E85D26]",
+  "from-[#D6FFD6] to-[#8BC48A]",
+  "from-[#D6E8FF] to-[#8AA8E8]",
+  "from-[#FFE6F0] to-[#FF8FAB]",
+  "from-[#E6E6FF] to-[#A8A8FF]",
+  "from-[#FFF9C0] to-[#E8C84A]",
+  "from-[#D0F0FF] to-[#6AC8E8]",
+];
+
+function gerarReceitas(): Receita[] {
+  const receitas: Receita[] = [];
+  let idCounter = 1;
+  categorias.forEach((cat, catIdx) => {
+    nomesPorCategoria[cat].forEach((nome, idx) => {
+      const baseRendimento = [25, 30, 35, 40, 20, 50, 60, 15][idx % 8];
+      const tempo = ["45 min", "1h", "1h15", "50 min", "1h30", "40 min"][idx % 6];
+      const dificuldade = ["Fácil", "Média", "Média", "Fácil", "Avançada"][idx % 5];
+      const isVeg = cat === "Vegetarianos" || nome.toLowerCase().includes("veg") || nome.includes("Jaca") || nome.includes("Abóbora");
+      const isGourmet = cat === "Gourmet" || nome.includes("Trufas") || nome.includes("Lagosta") || nome.includes("Costela");
+      const isParaVenda = cat === "Para vender" || cat === "Econômicos" || cat === "Mini salgados" || cat === "Salgados tradicionais";
+      const tipo: 'frito'|'assado' = cat === "Assados" || cat === "Especiais" || nome.includes("Assado") || nome.includes("Forno") || nome.includes("Empada") ? "assado" : "frito";
+      
+      const ingredientesBase: Ingrediente[] = [
+        { nome: "Farinha de trigo", qtd: 500 + idx*20, unidade: "g", categoria: "Massa" },
+        { nome: "Recheio principal", qtd: 300 + catIdx*15, unidade: "g", categoria: "Recheio" },
+        { nome: "Caldo de galinha", qtd: 600, unidade: "ml", categoria: "Massa" },
+        { nome: "Manteiga", qtd: 50, unidade: "g", categoria: "Massa" },
+        { nome: "Queijo muçarela", qtd: isVeg ? 0 : 100, unidade: "g", categoria: "Recheio" },
+        { nome: "Cebola picada", qtd: 80, unidade: "g", categoria: "Tempero" },
+        { nome: "Óleo para fritura", qtd: 800, unidade: "ml", categoria: "Fritura" },
+        { nome: "Farinha de rosca", qtd: 150, unidade: "g", categoria: "Empanar" },
+      ].filter(i=>i.qtd>0);
+
+      receitas.push({
+        id: `r${idCounter++}`,
+        nome,
+        categoria: cat,
+        emoji: emojis[(catIdx*3 + idx) % emojis.length],
+        gradiente: gradientes[(catIdx + idx) % gradientes.length],
+        descricao: `${nome} com massa leve e recheio cremoso, ideal para vender e lucrar até 300%.`,
+        rendimento: baseRendimento,
+        tempo,
+        dificuldade,
+        ingredientes: ingredientesBase,
+        modoPreparo: [
+          `Ferva ${600}ml de água com caldo, manteiga e temperos até levantar fervura para base de ${nome}.`,
+          `Adicione a farinha de uma vez e mexa vigorosamente até desgrudar da panela, formando massa lisa.`,
+          `Sove a massa ainda morna por 3 minutos, cubra e deixe descansar 10 minutos.`,
+          `Prepare o recheio refogando cebola e o principal, ajuste sal e finalize cremoso.`,
+          `Modele ${baseRendimento} unidades, recheie, feche bem, empane e frite/asse conforme tipo.`,
+        ],
+        montagem: `Abra porções de 35g, coloque 15g de recheio, modele formato característico de ${nome}.`,
+        fritura: tipo === 'frito' ? "Frite em óleo a 180°C por 3-4 min até dourar. Escorra em papel." : "Asse a 200°C por 22-25 min até dourar. Pincele gema para brilho.",
+        dicasProducao: "Congele aberto em bandeja por 2h antes de ensacar. Não descongele para fritar.",
+        dicasVenda: "Venda em combos: 10 por R$25, 25 por R$55. Destaque 'caseiro' e 'crocante'.",
+        conservacao: "Geladeira 3 dias, freezer 90 dias.",
+        validade: "3 dias refrigerado, 90 dias congelado cru.",
+        vegetariano: isVeg,
+        gourmet: isGourmet,
+        paraVenda: isParaVenda,
+        tipo,
+      });
+    });
+  });
+  return receitas;
+}
+
+const RECEITAS = gerarReceitas();
+
+export default function App() {
+  // ===== ACESSO =====
+  const [acessoLiberado, setAcessoLiberado] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('acessoLiberado') === 'true';
+    }
+    return false;
+  });
+  const [toast, setToast] = useState<string | null>(null);
+  const [showPixKey] = useState("18991925703");
+
+  // Logo taps
+  const tapTimes = useRef<number[]>([]);
+  const [showAdmSenha, setShowAdmSenha] = useState(false);
+  const [senhaInput, setSenhaInput] = useState("");
+  const [admAutenticado, setAdmAutenticado] = useState(false);
+  const [showAdmPanel, setShowAdmPanel] = useState(false);
+
+  // Sales form
+  const [nome, setNome] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [arquivoBase64, setArquivoBase64] = useState("");
+  const [arquivoPreview, setArquivoPreview] = useState("");
+
+  // Pedidos
+  const [pedidos, setPedidos] = useState<Pedido[]>(() => {
+    if (typeof window !== 'undefined') {
+      const s = localStorage.getItem('listaPedidos');
+      return s ? JSON.parse(s) : [];
+    }
+    return [];
+  });
+  const [buscaAdm, setBuscaAdm] = useState("");
+  const [verComprovante, setVerComprovante] = useState<Pedido | null>(null);
+
+  // App liberado states
+  const [pagina, setPagina] = useState<'inicio'|'receitas'|'calculadora'|'financeiro'|'producao'|'vendas'|'clientes'|'compras'|'config'>('inicio');
+  const [showMais, setShowMais] = useState(false);
+  const [buscaReceita, setBuscaReceita] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("Todas");
+  const [filtrosExtras, setFiltrosExtras] = useState({ veg: false, gourmet: false, paraVenda: false, frito: false, assado: false });
+  const [favoritos, setFavoritos] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const s = localStorage.getItem('favoritos');
+      return s ? JSON.parse(s) : [];
+    }
+    return [];
+  });
+  const [receitaSelecionada, setReceitaSelecionada] = useState<Receita | null>(null);
+
+  // Calculadora
+  const [calcReceitaId, setCalcReceitaId] = useState<string>(RECEITAS[0].id);
+  const [calcQtd, setCalcQtd] = useState(50);
+  const [calcUnidade, setCalcUnidade] = useState<'unidades'|'pessoas'>('unidades');
+  const [calcPorPessoa, setCalcPorPessoa] = useState(8);
+  const [ingredientesEditaveis, setIngredientesEditaveis] = useState<Record<string, number>>({});
+
+  // Financeiro
+  const [custos, setCustos] = useState<any[]>(() => {
+    const s = localStorage.getItem('custosIngredientes');
+    return s ? JSON.parse(s) : [{ id:'1', nome:'Farinha trigo', custo: 6, unidade:'kg', qtdBase:1000 }];
+  });
+  const [embalagem, setEmbalagem] = useState(() => Number(localStorage.getItem('custoEmbalagem') || 0.15));
+  const [gas, setGas] = useState(() => Number(localStorage.getItem('custoGas') || 0.10));
+  const [outros, setOutros] = useState(() => Number(localStorage.getItem('custoOutros') || 0.05));
+  const [valorHora, setValorHora] = useState(() => Number(localStorage.getItem('valorHora') || 25));
+  const [horas, setHoras] = useState(1);
+  const [margem, setMargem] = useState(() => Number(localStorage.getItem('margemLucro') || 100));
+
+  // Produção, Vendas, Clientes, Compras
+  const [producoes, setProducoes] = useState<any[]>(() => {
+    const s = localStorage.getItem('producoes'); return s ? JSON.parse(s) : [];
+  });
+  const [vendas, setVendas] = useState<any[]>(() => {
+    const s = localStorage.getItem('vendas'); return s ? JSON.parse(s) : [];
+  });
+  const [clientes, setClientes] = useState<any[]>(() => {
+    const s = localStorage.getItem('clientes'); return s ? JSON.parse(s) : [];
+  });
+  const [compras, setCompras] = useState<any[]>(() => {
+    const s = localStorage.getItem('compras'); return s ? JSON.parse(s) : [];
+  });
+  const [novaProducao, setNovaProducao] = useState({ receitaId: RECEITAS[0].id, qtd: 50, data: new Date().toISOString().slice(0,10) });
+  const [novaVenda, setNovaVenda] = useState({ produto: RECEITAS[0].nome, qtd: 10, valor: 25, cliente: '', forma: 'Pix', data: new Date().toISOString().slice(0,10) });
+  const [novoCliente, setNovoCliente] = useState({ nome:'', endereco:'', whatsapp:'', bairro:'', cidade:'', ref:'', obs:'' });
+  const [buscaCliente, setBuscaCliente] = useState("");
+
+  // Config
+  const [configPorPessoa, setConfigPorPessoa] = useState(() => Number(localStorage.getItem('salgadosPorPessoa') || 8));
+
+  // Effects persistence
+  useEffect(() => { localStorage.setItem('acessoLiberado', String(acessoLiberado)); }, [acessoLiberado]);
+  useEffect(() => { localStorage.setItem('listaPedidos', JSON.stringify(pedidos)); }, [pedidos]);
+  useEffect(() => { localStorage.setItem('favoritos', JSON.stringify(favoritos)); }, [favoritos]);
+  useEffect(() => { localStorage.setItem('custosIngredientes', JSON.stringify(custos)); }, [custos]);
+  useEffect(() => { localStorage.setItem('custoEmbalagem', String(embalagem)); }, [embalagem]);
+  useEffect(() => { localStorage.setItem('custoGas', String(gas)); }, [gas]);
+  useEffect(() => { localStorage.setItem('custoOutros', String(outros)); }, [outros]);
+  useEffect(() => { localStorage.setItem('valorHora', String(valorHora)); }, [valorHora]);
+  useEffect(() => { localStorage.setItem('margemLucro', String(margem)); }, [margem]);
+  useEffect(() => { localStorage.setItem('producoes', JSON.stringify(producoes)); }, [producoes]);
+  useEffect(() => { localStorage.setItem('vendas', JSON.stringify(vendas)); }, [vendas]);
+  useEffect(() => { localStorage.setItem('clientes', JSON.stringify(clientes)); }, [clientes]);
+  useEffect(() => { localStorage.setItem('compras', JSON.stringify(compras)); }, [compras]);
+  useEffect(() => { localStorage.setItem('salgadosPorPessoa', String(configPorPessoa)); }, [configPorPessoa]);
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
+
+  // Logo tap handler - com feedback para auditoria e 5 toques para ADM
+  const handleLogoTap = () => {
+    const now = Date.now();
+    tapTimes.current = [...tapTimes.current.filter(t => now - t < 3000), now];
+    const count = tapTimes.current.length;
+    if (count >= 5) {
+      tapTimes.current = [];
+      setShowAdmSenha(true);
+      setToast("Acesso restrito detectado");
+    } else {
+      // feedback imediato para cada toque, mantém segredo do ADM
+      setToast(`Toque ${count} de 5`);
+      setTimeout(()=>{ setToast(t=> t && t.startsWith("Toque") ? null : t); }, 800);
+    }
+  };
+
+  const copiarPix = async () => {
+    try {
+      await navigator.clipboard.writeText(showPixKey);
+      setToast("Chave PIX copiada!");
+    } catch {
+      // fallback
+      const el = document.createElement('textarea');
+      el.value = showPixKey;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setToast("Chave PIX copiada!");
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (!file) return;
+    setArquivo(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setArquivoBase64(result);
+      if (file.type.startsWith('image/')) {
+        setArquivoPreview(result);
+      } else {
+        setArquivoPreview("");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const enviarComprovante = () => {
+    if (!nome.trim() || !whatsapp.trim()) {
+      setToast("Preencha nome e WhatsApp");
+      return;
+    }
+    if (!arquivo) {
+      setToast("Selecione o comprovante");
+      return;
+    }
+    const novoPedido: Pedido = {
+      id: Date.now().toString(),
+      nome: nome.trim(),
+      whatsapp: whatsapp.trim().replace(/\D/g,''),
+      data: new Date().toLocaleString('pt-BR'),
+      comprovanteBase64: arquivoBase64,
+      comprovanteNome: arquivo.name,
+      comprovanteTipo: arquivo.type,
+      status: 'pendente',
+    };
+    const lista = [novoPedido, ...pedidos];
+    setPedidos(lista);
+    // abrir whatsapp
+    const msg = `Olá! Realizei o pagamento de R$12,90 da Fábrica de Salgados. Nome: ${novoPedido.nome} WhatsApp: ${novoPedido.whatsapp}. Estou enviando o comprovante.`;
+    const url = `https://wa.me/5518991488302?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+    setToast("Pedido salvo! Comprovante enviado. Aguarde liberação em até 5 minutos.");
+    setNome(""); setWhatsapp(""); setArquivo(null); setArquivoBase64(""); setArquivoPreview("");
+  };
+
+  // ADM actions
+  const liberarPedido = (pedido: Pedido) => {
+    const atualizados = pedidos.map(p => p.id === pedido.id ? { ...p, status: 'liberado' as const } : p);
+    setPedidos(atualizados);
+    // salvar acessos liberados
+    const acessos = JSON.parse(localStorage.getItem('acessosLiberados') || '[]');
+    acessos.push({ whatsapp: pedido.whatsapp, nome: pedido.nome, data: new Date().toISOString() });
+    localStorage.setItem('acessosLiberados', JSON.stringify(acessos));
+    // liberar aparelho atual (simulação multi-usuário: libera aparelho atual)
+    setAcessoLiberado(true);
+    localStorage.setItem('acessoLiberado', 'true');
+    setToast(`Acesso liberado para ${pedido.nome}! Recarregue se necessário.`);
+  };
+
+  const bloquearPedido = (pedido: Pedido) => {
+    setPedidos(pedidos.map(p => p.id === pedido.id ? { ...p, status: 'pendente' as const } : p));
+    setToast("Pedido marcado como pendente");
+  };
+
+  const excluirPedido = (id: string) => {
+    if (!confirm("Excluir este pedido?")) return;
+    setPedidos(pedidos.filter(p => p.id !== id));
+  };
+
+  const verificarSenha = () => {
+    if (senhaInput === "20112024") {
+      setAdmAutenticado(true);
+      setShowAdmSenha(false);
+      setShowAdmPanel(true);
+      setSenhaInput("");
+    } else {
+      setToast("Senha incorreta");
+      setSenhaInput("");
+    }
+  };
+
+  // Calculadora logic
+  const receitaCalc = useMemo(() => RECEITAS.find(r => r.id === calcReceitaId) || RECEITAS[0], [calcReceitaId]);
+  const totalUnidadesCalc = calcUnidade === 'unidades' ? calcQtd : calcQtd * calcPorPessoa;
+  const fatorCalc = totalUnidadesCalc / (receitaCalc.rendimento || 1);
+  const ingredientesCalculados = receitaCalc.ingredientes.map(ing => {
+    const base = ingredientesEditaveis[ing.nome] ?? ing.qtd;
+    return { ...ing, qtdOriginal: ing.qtd, qtdCalc: base * fatorCalc };
+  });
+
+  // Financeiro calc
+  const custoIngredientesTotal = custos.reduce((acc, c) => acc + (Number(c.custo) || 0), 0);
+  const custoMaoObra = valorHora * horas;
+  const custoTotalLote = custoIngredientesTotal + embalagem* (receitaCalc.rendimento) + gas + outros + custoMaoObra;
+  const custoPorUnidade = custoTotalLote / (receitaCalc.rendimento || 1);
+  const precoSugerido = custoPorUnidade * (1 + margem/100);
+  const lucroUnidade = precoSugerido - custoPorUnidade;
+
+  // Dashboard numbers
+  const totalProduzido = producoes.reduce((a,b)=>a+(b.qtd||0),0);
+  const totalVendido = vendas.reduce((a,b)=>a+(b.qtd||0),0);
+  const faturamento = vendas.reduce((a,b)=>a+ (b.valor||0),0);
+  const lucroEstimado = faturamento - (totalVendido * custoPorUnidade);
+
+  // Filtros receitas
+  const receitasFiltradas = RECEITAS.filter(r => {
+    if (filtroCategoria !== "Todas" && r.categoria !== filtroCategoria) return false;
+    if (buscaReceita && !r.nome.toLowerCase().includes(buscaReceita.toLowerCase())) return false;
+    if (filtrosExtras.veg && !r.vegetariano) return false;
+    if (filtrosExtras.gourmet && !r.gourmet) return false;
+    if (filtrosExtras.paraVenda && !r.paraVenda) return false;
+    if (filtrosExtras.frito && r.tipo !== 'frito') return false;
+    if (filtrosExtras.assado && r.tipo !== 'assado') return false;
+    return true;
+  });
+
+  const pedidosFiltrados = pedidos.filter(p => {
+    const q = buscaAdm.toLowerCase();
+    return !q || p.nome.toLowerCase().includes(q) || p.whatsapp.includes(q);
+  });
+  const totalPendentes = pedidos.filter(p=>p.status==='pendente').length;
+  const totalLiberados = pedidos.filter(p=>p.status==='liberado').length;
+
+  if (!acessoLiberado && !admAutenticado) {
+    // ===== PÁGINA DE VENDAS BLOQUEADA =====
+    return (
+      <div className="min-h-screen bg-[#FFF9F0] text-[#1A1A1A] overflow-x-hidden antialiased">
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap'); *{font-family:Outfit,sans-serif} .font-display{font-family:Fraunces,serif}`}</style>
+        
+        {/* Header vendas */}
+        <header className="sticky top-0 z-30 bg-[#FFF9F0]/90 backdrop-blur-xl border-b border-black/5">
+          <div className="max-w-7xl mx-auto px-4 h-[64px] flex items-center justify-between">
+            <button onClick={handleLogoTap} className="flex items-center gap-2 select-none">
+              <div className="w-9 h-9 rounded-full bg-[#1A1A1A] text-white grid place-items-center font-black text-[14px]">FS</div>
+              <div className="text-left leading-none">
+                <div className="font-display font-extrabold text-[16px] tracking-tight">FÁBRICA DE SALGADOS</div>
+                <div className="text-[10px] tracking-[0.2em] text-[#E85D26] font-bold">PROFISSIONAL</div>
+              </div>
+            </button>
+            <div className="text-[11px] font-semibold px-3 py-1 rounded-full bg-black text-white">ACESSO BLOQUEADO</div>
+          </div>
+        </header>
+
+        <main className="max-w-[720px] mx-auto px-4 pb-24">
+          {/* Hero */}
+          <div className="pt-8 pb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1A1A1A] text-white text-[11px] font-bold tracking-wide mb-4">
+              <span className="w-2 h-2 bg-[#E85D26] rounded-full animate-pulse"></span> MÉTODO VALIDADO • +3.847 ALUNAS
+            </div>
+            <h1 className="font-display text-[34px] leading-[0.95] font-extrabold tracking-tight">
+              Transforme seus <span className="text-[#E85D26]">salgados</span> em um negócio lucrativo
+            </h1>
+            <p className="mt-3 text-[15px] leading-6 text-black/60">Aprenda as 100 receitas que mais vendem, calcule custos automático e venda todo dia com lucro de até 300%.</p>
+            
+            <div className="mt-6 grid gap-3">
+              {[
+                "100 receitas com ficha técnica completa",
+                "Calculadora de ingredientes por quantidade",
+                "Financeiro com preço sugerido e lucro real",
+                "Produção, vendas, clientes e lista de compras",
+                "Acesso vitalício no seu celular",
+              ].map((b,i)=>(
+                <div key={i} className="flex gap-3 items-center bg-white rounded-2xl px-4 py-3 shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-black/[0.04]">
+                  <div className="w-7 h-7 rounded-full bg-[#E85D26] text-white grid place-items-center">✓</div>
+                  <div className="text-[14px] font-semibold">{b}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Oferta */}
+          <div className="bg-[#1A1A1A] text-white rounded-[28px] p-6 relative overflow-hidden">
+            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-[#E85D26] blur-[40px] opacity-40"></div>
+            <div className="relative">
+              <div className="text-[12px] tracking-[0.2em] text-white/50 font-bold">OFERTA DE LANÇAMENTO</div>
+              <div className="mt-2 flex items-end gap-3">
+                <div className="text-[44px] font-display font-extrabold leading-none">R$12,90</div>
+                <div className="pb-2">
+                  <div className="text-[13px] line-through text-white/40">De R$97,00</div>
+                  <div className="text-[12px] px-2 py-0.5 rounded-full bg-[#E85D26] font-bold">87% OFF</div>
+                </div>
+              </div>
+              <div className="mt-4 text-[13px] text-white/70 leading-5">Pagamento único • Acesso imediato após comprovação • Seus dados ficam salvos no seu celular</div>
+              
+              <button onClick={()=>{
+                const el = document.getElementById('pix-area');
+                if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); }
+                setToast("Confira o PIX abaixo para pagar");
+                // fallback visual: pulsa area pix
+                setTimeout(()=>{ el?.classList.add('ring-2','ring-[#E85D26]'); setTimeout(()=>el?.classList.remove('ring-2','ring-[#E85D26]'), 800); }, 300);
+              }} className="mt-6 w-full h-[56px] rounded-full bg-[#E85D26] text-white font-extrabold text-[15px] tracking-wide shadow-[0_10px_24px_rgba(232,93,38,0.4)] active:scale-[0.98] transition">
+                QUERO A MINHA
+              </button>
+              <div className="mt-3 text-center text-[11px] text-white/50">🔒 Compra segura • Liberação em até 5 minutos</div>
+            </div>
+          </div>
+
+          {/* PIX */}
+          <div id="pix-area" className="mt-8 bg-white rounded-[24px] p-5 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.06)] scroll-mt-20 transition-all">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-full bg-[#C6A86A]/20 grid place-items-center text-[#C6A86A]">◍</div>
+              <div className="font-bold text-[14px]">PAGAMENTO VIA PIX</div>
+            </div>
+            <div className="bg-[#FFF9F0] rounded-2xl p-4 border border-dashed border-black/10">
+              <div className="text-[11px] font-bold tracking-wide text-black/50">CHAVE PIX • CPF</div>
+              <div className="mt-1 font-mono text-[18px] font-bold tracking-tight">{showPixKey}</div>
+              <div className="text-[11px] text-black/50 mt-1">Titular: Fábrica de Salgados</div>
+            </div>
+            <button onClick={copiarPix} className="mt-4 w-full h-12 rounded-full border-2 border-[#1A1A1A] font-bold text-[13px] tracking-wide active:scale-[0.98] transition">
+              COPIAR CHAVE PIX
+            </button>
+          </div>
+
+          {/* Já paguei */}
+          <div className="mt-6 bg-white rounded-[24px] p-5 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.06)]">
+            <div className="font-display font-bold text-[20px]">JÁ PAGUEI</div>
+            <div className="text-[13px] text-black/60 mt-1">Envie seu comprovante para liberar seu acesso</div>
+
+            <div className="mt-5 grid gap-4">
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-bold tracking-wide">NOME COMPLETO *</span>
+                <input value={nome} onChange={e=>setNome(e.target.value)} placeholder="Seu nome completo" className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10 outline-none focus:border-[#E85D26] text-[14px]" />
+              </label>
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-bold tracking-wide">WHATSAPP *</span>
+                <input value={whatsapp} onChange={e=>setWhatsapp(e.target.value)} placeholder="(18) 99999-9999" className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10 outline-none focus:border-[#E85D26] text-[14px]" />
+              </label>
+              <label className="grid gap-1.5">
+                <span className="text-[11px] font-bold tracking-wide">COMPROVANTE (IMAGEM OU PDF) *</span>
+                <div className="relative">
+                  <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="w-full h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10 text-[13px] file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:bg-[#1A1A1A] file:text-white file:text-[12px] file:font-bold" />
+                </div>
+                {arquivo && (
+                  <div className="mt-2 bg-[#FFF9F0] rounded-2xl p-3 flex gap-3 items-center">
+                    {arquivoPreview ? <img src={arquivoPreview} className="w-14 h-14 rounded-xl object-cover" /> : <div className="w-14 h-14 rounded-xl bg-black/5 grid place-items-center text-[20px]">📄</div>}
+                    <div className="text-[12px]">
+                      <div className="font-bold truncate max-w-[180px]">{arquivo.name}</div>
+                      <div className="text-black/50">{(arquivo.size/1024).toFixed(0)} KB</div>
+                    </div>
+                  </div>
+                )}
+              </label>
+
+              <button onClick={enviarComprovante} className="w-full h-[56px] rounded-full bg-[#1A1A1A] text-white font-extrabold text-[13px] tracking-wide active:scale-[0.98] transition">
+                ENVIAR COMPROVANTE PELO WHATSAPP
+              </button>
+              <div className="text-[11px] leading-4 text-black/50 text-center">Após enviar o comprovante, seu acesso será liberado em até 5 minutos após conferência. Você será avisado no WhatsApp.</div>
+            </div>
+          </div>
+
+          <div className="mt-8 text-center text-[11px] text-black/30">© Fábrica de Salgados • Conteúdo protegido • Suporte via WhatsApp</div>
+        </main>
+
+        {/* Toast */}
+        {toast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1A1A1A] text-white px-5 py-3 rounded-full text-[13px] font-semibold shadow-[0_10px_30px_rgba(0,0,0,0.3)] z-50 max-w-[90%] text-center">
+            {toast}
+          </div>
+        )}
+
+        {/* Modal senha ADM */}
+        {showAdmSenha && (
+          <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm grid place-items-center p-4">
+            <div className="bg-white rounded-[24px] w-full max-w-[360px] p-6 shadow-2xl">
+              <div className="font-display font-bold text-[20px]">Acesso Restrito</div>
+              <div className="text-[13px] text-black/60 mt-1">Área administrativa • Digite a senha</div>
+              <input autoFocus type="password" value={senhaInput} onChange={e=>setSenhaInput(e.target.value)} placeholder="Senha" className="mt-4 w-full h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10 outline-none focus:border-[#1A1A1A]" onKeyDown={e=> e.key==='Enter' && verificarSenha()} />
+              <div className="mt-4 flex gap-3">
+                <button onClick={()=>{setShowAdmSenha(false); setSenhaInput("");}} className="flex-1 h-12 rounded-full border border-black/10 font-bold text-[13px]">Cancelar</button>
+                <button onClick={verificarSenha} className="flex-1 h-12 rounded-full bg-[#1A1A1A] text-white font-bold text-[13px]">Entrar</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ===== ADM PANEL (pode abrir mesmo bloqueado) =====
+  if (showAdmPanel && admAutenticado) {
+    return (
+      <div className="min-h-screen bg-[#FFF9F0] text-[#1A1A1A] overflow-x-hidden">
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap'); *{font-family:Outfit,sans-serif} .font-display{font-family:Fraunces,serif}`}</style>
+        <header className="sticky top-0 z-20 bg-[#1A1A1A] text-white">
+          <div className="max-w-7xl mx-auto px-4 h-[64px] flex items-center justify-between">
+            <div className="font-display font-bold">Painel ADM • Fábrica de Salgados</div>
+            <button onClick={()=>{setShowAdmPanel(false); setAdmAutenticado(false);}} className="h-9 px-4 rounded-full bg-white/10 font-bold text-[12px]">Sair do ADM</button>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 pb-20 pt-6">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white rounded-2xl p-4 border border-black/5"><div className="text-[11px] font-bold text-black/50">TOTAL</div><div className="text-[22px] font-extrabold">{pedidos.length}</div></div>
+            <div className="bg-[#FFE9E0] rounded-2xl p-4 border border-[#E85D26]/20"><div className="text-[11px] font-bold text-[#E85D26]">PENDENTES</div><div className="text-[22px] font-extrabold text-[#E85D26]">{totalPendentes}</div></div>
+            <div className="bg-[#E8FFE8] rounded-2xl p-4 border border-green-500/20"><div className="text-[11px] font-bold text-green-700">LIBERADOS</div><div className="text-[22px] font-extrabold text-green-700">{totalLiberados}</div></div>
+          </div>
+
+          <div className="mt-6 flex gap-3">
+            <input value={buscaAdm} onChange={e=>setBuscaAdm(e.target.value)} placeholder="Buscar nome ou whatsapp..." className="flex-1 h-12 rounded-full px-5 bg-white border border-black/10 outline-none text-[14px]" />
+            <button onClick={()=>{setAcessoLiberado(true); setToast("Aparelho atual liberado!");}} className="h-12 px-5 rounded-full bg-[#E85D26] text-white font-bold text-[12px] whitespace-nowrap">Liberar este aparelho agora</button>
+          </div>
+
+          <div className="mt-6 grid gap-4">
+            {pedidosFiltrados.length===0 && <div className="bg-white rounded-2xl p-8 text-center text-black/40 text-[14px] border border-black/5">Nenhum pedido encontrado</div>}
+            {pedidosFiltrados.map(p=>(
+              <div key={p.id} className="bg-white rounded-[20px] p-4 border border-black/5 shadow-sm">
+                <div className="flex gap-3">
+                  {p.comprovanteTipo.startsWith('image/') ? <img src={p.comprovanteBase64} className="w-16 h-16 rounded-xl object-cover border" /> : <div className="w-16 h-16 rounded-xl bg-black/5 grid place-items-center">📄</div>}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="font-bold text-[15px] truncate">{p.nome}</div>
+                      <div className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${p.status==='liberado' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{p.status.toUpperCase()}</div>
+                    </div>
+                    <div className="text-[12px] text-black/60">{p.whatsapp} • {p.data}</div>
+                    <div className="text-[11px] text-black/40 truncate">{p.comprovanteNome}</div>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button onClick={()=>liberarPedido(p)} className="h-11 rounded-full bg-[#1A1A1A] text-white font-bold text-[12px]">Liberar Acesso</button>
+                  <button onClick={()=>bloquearPedido(p)} className="h-11 rounded-full border border-black/10 font-bold text-[12px]">Bloquear Acesso</button>
+                  <button onClick={()=>setVerComprovante(p)} className="h-11 rounded-full bg-[#FFF9F0] border border-black/5 font-bold text-[12px]">Ver Comprovante</button>
+                  <button onClick={()=>window.open(`https://wa.me/55${p.whatsapp.replace(/\D/g,'')}`,'_blank')} className="h-11 rounded-full bg-[#E85D26]/10 text-[#E85D26] font-bold text-[12px]">Chamar no WhatsApp</button>
+                </div>
+                <button onClick={()=>excluirPedido(p.id)} className="mt-2 w-full h-9 rounded-full text-[11px] text-red-500 font-bold">Excluir Pedido</button>
+              </div>
+            ))}
+          </div>
+        </main>
+
+        {verComprovante && (
+          <div className="fixed inset-0 z-50 bg-black/80 grid place-items-center p-4" onClick={()=>setVerComprovante(null)}>
+            <div className="bg-white rounded-[20px] p-3 max-w-[520px] w-full" onClick={e=>e.stopPropagation()}>
+              <div className="flex justify-between items-center p-2">
+                <div className="font-bold">{verComprovante.nome} • {verComprovante.comprovanteNome}</div>
+                <button onClick={()=>setVerComprovante(null)} className="w-8 h-8 rounded-full bg-black/5 grid place-items-center">✕</button>
+              </div>
+              {verComprovante.comprovanteTipo.startsWith('image/') ? (
+                <img src={verComprovante.comprovanteBase64} className="w-full rounded-xl" />
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="text-[40px]">📄</div>
+                  <div className="text-[13px] mt-2">Arquivo PDF • {verComprovante.comprovanteNome}</div>
+                  <a href={verComprovante.comprovanteBase64} download={verComprovante.comprovanteNome} className="mt-3 inline-block h-10 px-5 rounded-full bg-[#1A1A1A] text-white grid place-items-center font-bold text-[12px]">Baixar arquivo</a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1A1A1A] text-white px-5 py-3 rounded-full text-[13px] font-semibold shadow-xl z-50">{toast}</div>}
+      </div>
+    );
+  }
+
+  // ===== APP LIBERADO =====
+  return (
+    <div className="min-h-screen bg-[#FFF9F0] text-[#1A1A1A] overflow-x-hidden">
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap'); *{font-family:Outfit,sans-serif} .font-display{font-family:Fraunces,serif}`}</style>
+
+      {/* Header liberado */}
+      <header className="sticky top-0 z-30 bg-[#FFF9F0]/90 backdrop-blur-xl border-b border-black/5">
+        <div className="max-w-7xl mx-auto px-4 h-[64px] flex items-center justify-between">
+          <button onClick={handleLogoTap} className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-full bg-[#1A1A1A] text-white grid place-items-center font-black text-[14px]">FS</div>
+            <div className="text-left leading-none">
+              <div className="font-display font-extrabold text-[15px] tracking-tight">FÁBRICA DE SALGADOS</div>
+              <div className="text-[10px] tracking-[0.2em] text-[#E85D26] font-bold">LIBERADO • PRO</div>
+            </div>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-[#E8FFE8] text-green-700 text-[11px] font-bold">● AO VIVO</div>
+            <button onClick={()=>setPagina('config')} className="w-9 h-9 rounded-full bg-white border border-black/5 grid place-items-center">⚙️</button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 pb-[100px] pt-4">
+        {pagina==='inicio' && (
+          <div className="grid gap-5">
+            <div className="bg-[#1A1A1A] text-white rounded-[28px] p-6 relative overflow-hidden">
+              <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-[#E85D26] blur-[50px] opacity-30"></div>
+              <div className="relative">
+                <div className="text-[12px] tracking-widest text-white/50 font-bold">DASHBOARD • HOJE</div>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="bg-white/10 rounded-2xl p-4"><div className="text-[11px] text-white/60">FATURAMENTO</div><div className="text-[20px] font-extrabold">R$ {faturamento.toFixed(2)}</div></div>
+                  <div className="bg-white/10 rounded-2xl p-4"><div className="text-[11px] text-white/60">LUCRO EST.</div><div className="text-[20px] font-extrabold text-[#C6A86A]">R$ {lucroEstimado.toFixed(2)}</div></div>
+                  <div className="bg-white/10 rounded-2xl p-4"><div className="text-[11px] text-white/60">PRODUZIDOS</div><div className="text-[20px] font-extrabold">{totalProduzido}</div></div>
+                  <div className="bg-white/10 rounded-2xl p-4"><div className="text-[11px] text-white/60">VENDIDOS</div><div className="text-[20px] font-extrabold">{totalVendido}</div></div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button onClick={()=>setPagina('receitas')} className="h-11 px-5 rounded-full bg-white text-black font-bold text-[12px]">Ver receitas</button>
+                  <button onClick={()=>setPagina('calculadora')} className="h-11 px-5 rounded-full bg-[#E85D26] text-white font-bold text-[12px]">Calcular produção</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { t:'Receitas', d:'100 receitas', p:'receitas', e:'🥟', c:'from-[#FFE6C7] to-[#FFC38A]' },
+                { t:'Calculadora', d:'Custo por lote', p:'calculadora', e:'🧮', c:'from-[#D6E8FF] to-[#8AA8E8]' },
+                { t:'Produção', d:`${producoes.length} lotes`, p:'producao', e:'👨‍🍳', c:'from-[#D6FFD6] to-[#8BC48A]' },
+                { t:'Vendas', d:`${vendas.length} vendas`, p:'vendas', e:'💰', c:'from-[#FFF1C6] to-[#C6A86A]' },
+              ].map(card=>(
+                <button key={card.p} onClick={()=>setPagina(card.p as any)} className={`text-left rounded-[22px] p-4 bg-gradient-to-br ${card.c} border border-black/5 shadow-sm`}>
+                  <div className="text-[22px]">{card.e}</div>
+                  <div className="mt-2 font-bold text-[15px]">{card.t}</div>
+                  <div className="text-[12px] text-black/60">{card.d}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold text-[16px]">Atalhos rápidos</div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <button onClick={()=>setPagina('clientes')} className="h-12 rounded-full bg-[#FFF9F0] border border-black/5 font-bold text-[12px]">Clientes</button>
+                <button onClick={()=>setPagina('compras')} className="h-12 rounded-full bg-[#FFF9F0] border border-black/5 font-bold text-[12px]">Compras</button>
+                <button onClick={()=>setPagina('financeiro')} className="h-12 rounded-full bg-[#1A1A1A] text-white font-bold text-[12px]">Financeiro</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pagina==='receitas' && (
+          <div className="grid gap-4 w-full max-w-full overflow-hidden">
+            <div className="flex gap-2 w-full max-w-full">
+              <input value={buscaReceita} onChange={e=>setBuscaReceita(e.target.value)} placeholder="Buscar receita..." className="flex-1 min-w-0 h-12 rounded-full px-5 bg-white border border-black/10 outline-none text-[14px]" />
+              <select value={filtroCategoria} onChange={e=>setFiltroCategoria(e.target.value)} className="h-12 rounded-full px-3 bg-white border border-black/10 text-[12px] font-bold shrink-0 w-[118px]">
+                <option>Todas</option>
+                {categorias.map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {[
+                { k:'veg', l:'🌱 Veg' },
+                { k:'gourmet', l:'✨ Gourmet' },
+                { k:'paraVenda', l:'🚀 Para vender' },
+                { k:'frito', l:'🔥 Frito' },
+                { k:'assado', l:'🥐 Assado' },
+              ].map(f=>(
+                <button key={f.k} onClick={()=>setFiltrosExtras(s=>({...s, [f.k]: !s[f.k as keyof typeof s]}))} className={`whitespace-nowrap h-9 px-4 rounded-full text-[12px] font-bold border ${filtrosExtras[f.k as keyof typeof filtrosExtras] ? 'bg-[#1A1A1A] text-white border-black' : 'bg-white border-black/10'}`}>{f.l}</button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {receitasFiltradas.map(r=>(
+                <button key={r.id} onClick={()=>setReceitaSelecionada(r)} className="text-left bg-white rounded-[22px] p-4 border border-black/5 shadow-sm hover:shadow-md transition">
+                  <div className={`h-24 rounded-2xl bg-gradient-to-br ${r.gradiente} grid place-items-center text-[36px]`}>{r.emoji}</div>
+                  <div className="mt-3 flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-bold text-[15px] leading-tight">{r.nome}</div>
+                      <div className="text-[11px] text-black/50 mt-1">{r.categoria} • {r.tipo} • {r.rendimento} un • {r.tempo}</div>
+                    </div>
+                    <div onClick={e=>{e.stopPropagation(); setFavoritos(f=> f.includes(r.id) ? f.filter(x=>x!==r.id) : [...f, r.id])}} className={`w-8 h-8 rounded-full grid place-items-center border ${favoritos.includes(r.id) ? 'bg-[#E85D26] text-white border-[#E85D26]' : 'bg-[#FFF9F0] border-black/10'}`}>♥</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {pagina==='calculadora' && (
+          <div className="grid gap-4">
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold text-[18px]">Calculadora de Produção</div>
+              <div className="mt-4 grid gap-3">
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold">RECEITA</span>
+                  <select value={calcReceitaId} onChange={e=>setCalcReceitaId(e.target.value)} className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10 text-[13px]">
+                    {RECEITAS.map(r=><option key={r.id} value={r.id}>{r.nome} • {r.rendimento} un</option>)}
+                  </select>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="grid gap-1.5 col-span-2">
+                    <span className="text-[11px] font-bold">QUANTIDADE</span>
+                    <input type="number" value={calcQtd} onChange={e=>setCalcQtd(Number(e.target.value)||0)} className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10" />
+                  </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-[11px] font-bold">UNIDADE</span>
+                    <select value={calcUnidade} onChange={e=>setCalcUnidade(e.target.value as any)} className="h-12 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px] font-bold">
+                      <option value="unidades">Unidades</option>
+                      <option value="pessoas">Pessoas</option>
+                    </select>
+                  </label>
+                </div>
+                {calcUnidade==='pessoas' && (
+                  <label className="grid gap-1.5">
+                    <span className="text-[11px] font-bold">SALGADOS POR PESSOA (padrão {configPorPessoa})</span>
+                    <input type="number" value={calcPorPessoa} onChange={e=>setCalcPorPessoa(Number(e.target.value)||0)} className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10" />
+                  </label>
+                )}
+                <div className="bg-[#1A1A1A] text-white rounded-2xl p-4 flex justify-between">
+                  <div><div className="text-[11px] text-white/60">TOTAL A PRODUZIR</div><div className="text-[20px] font-extrabold">{totalUnidadesCalc} un</div></div>
+                  <div className="text-right"><div className="text-[11px] text-white/60">FATOR</div><div className="text-[20px] font-extrabold">x{fatorCalc.toFixed(2)}</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold">Ingredientes calculados</div>
+              <div className="text-[12px] text-black/50">Edite se precisar ajustar</div>
+              <div className="mt-3 grid gap-2">
+                {ingredientesCalculados.map((ing, i)=>(
+                  <div key={i} className="flex items-center gap-2 bg-[#FFF9F0] rounded-2xl px-4 py-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-semibold truncate">{ing.nome}</div>
+                      <div className="text-[11px] text-black/50">{ing.categoria} • original {ing.qtdOriginal}{ing.unidade}</div>
+                    </div>
+                    <input type="number" value={ingredientesEditaveis[ing.nome] ?? ing.qtd} onChange={e=>setIngredientesEditaveis(s=>({...s, [ing.nome]: Number(e.target.value)||0}))} className="w-20 h-10 rounded-full px-3 bg-white border border-black/10 text-[12px] font-bold" />
+                    <div className="text-[12px] font-bold w-[84px] text-right">{ing.qtdCalc.toFixed(0)}{ing.unidade}</div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={()=>{
+                const novos = ingredientesCalculados.map(ing=>({ id: Date.now()+Math.random()+'', nome: `${ing.nome} - ${receitaCalc.nome}`, qtd: ing.qtdCalc, unidade: ing.unidade, comprado:false }));
+                setCompras([...compras, ...novos]);
+                setToast("Adicionado à lista de compras");
+              }} className="mt-4 w-full h-12 rounded-full bg-[#E85D26] text-white font-bold text-[13px]">Adicionar à Lista de Compras</button>
+            </div>
+          </div>
+        )}
+
+        {pagina==='financeiro' && (
+          <div className="grid gap-4">
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold text-[18px]">Financeiro • Precificação</div>
+              <div className="mt-4 grid gap-3">
+                <div className="text-[12px] font-bold">CUSTOS DE INGREDIENTES</div>
+                {custos.map((c, idx)=>(
+                  <div key={c.id} className="flex gap-2">
+                    <input value={c.nome} onChange={e=>{ const nc=[...custos]; nc[idx].nome=e.target.value; setCustos(nc); }} placeholder="Ingrediente" className="flex-1 h-11 rounded-full px-4 bg-[#FFF9F0] border border-black/10 text-[12px]" />
+                    <input type="number" value={c.custo} onChange={e=>{ const nc=[...custos]; nc[idx].custo=Number(e.target.value); setCustos(nc); }} className="w-24 h-11 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px]" />
+                    <button onClick={()=>setCustos(custos.filter((_,i)=>i!==idx))} className="w-11 h-11 rounded-full bg-black/5">✕</button>
+                  </div>
+                ))}
+                <button onClick={()=>setCustos([...custos, { id: Date.now()+'', nome:'Novo', custo:0, unidade:'un', qtdBase:1 }])} className="h-11 rounded-full border border-dashed border-black/20 font-bold text-[12px]">+ Ingrediente</button>
+
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  <label className="grid gap-1"><span className="text-[10px] font-bold">EMBALAGEM/un</span><input type="number" step="0.01" value={embalagem} onChange={e=>setEmbalagem(Number(e.target.value))} className="h-11 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px]" /></label>
+                  <label className="grid gap-1"><span className="text-[10px] font-bold">GÁS</span><input type="number" step="0.01" value={gas} onChange={e=>setGas(Number(e.target.value))} className="h-11 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px]" /></label>
+                  <label className="grid gap-1"><span className="text-[10px] font-bold">OUTROS</span><input type="number" step="0.01" value={outros} onChange={e=>setOutros(Number(e.target.value))} className="h-11 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px]" /></label>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="grid gap-1"><span className="text-[10px] font-bold">HORAS TRABALHADAS</span><input type="number" value={horas} onChange={e=>setHoras(Number(e.target.value))} className="h-11 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px]" /></label>
+                  <label className="grid gap-1"><span className="text-[10px] font-bold">VALOR HORA R$</span><input type="number" value={valorHora} onChange={e=>setValorHora(Number(e.target.value))} className="h-11 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px]" /></label>
+                </div>
+                <label className="grid gap-2">
+                  <span className="text-[10px] font-bold">MARGEM DE LUCRO {margem}%</span>
+                  <input type="range" min={20} max={400} value={margem} onChange={e=>setMargem(Number(e.target.value))} className="accent-[#E85D26]" />
+                </label>
+
+                <div className="bg-[#1A1A1A] text-white rounded-2xl p-4 grid grid-cols-2 gap-3">
+                  <div><div className="text-[10px] text-white/60">CUSTO TOTAL LOTE</div><div className="font-bold">R$ {custoTotalLote.toFixed(2)}</div></div>
+                  <div><div className="text-[10px] text-white/60">CUSTO / UNIDADE</div><div className="font-bold">R$ {custoPorUnidade.toFixed(2)}</div></div>
+                  <div><div className="text-[10px] text-white/60">PREÇO SUGERIDO</div><div className="font-bold text-[#C6A86A]">R$ {precoSugerido.toFixed(2)}</div></div>
+                  <div><div className="text-[10px] text-white/60">LUCRO / UN</div><div className="font-bold text-green-400">R$ {lucroUnidade.toFixed(2)}</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold">Simulador de lucro</div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                {[50,100,200].map(q=>(
+                  <div key={q} className="bg-[#FFF9F0] rounded-2xl p-3"><div className="text-[11px]">{q} un</div><div className="font-bold text-[13px]">Venda R$ {(q*precoSugerido).toFixed(0)}</div><div className="text-[11px] text-green-700 font-bold">Lucro R$ {(q*lucroUnidade).toFixed(0)}</div></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pagina==='producao' && (
+          <div className="grid gap-4">
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold text-[18px]">Nova Produção</div>
+              <div className="mt-4 grid gap-3">
+                <select value={novaProducao.receitaId} onChange={e=>setNovaProducao({...novaProducao, receitaId:e.target.value})} className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10 text-[13px]">
+                  {RECEITAS.map(r=><option key={r.id} value={r.id}>{r.nome}</option>)}
+                </select>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="number" value={novaProducao.qtd} onChange={e=>setNovaProducao({...novaProducao, qtd:Number(e.target.value)})} placeholder="Qtd" className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10" />
+                  <input type="date" value={novaProducao.data} onChange={e=>setNovaProducao({...novaProducao, data:e.target.value})} className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10 text-[12px]" />
+                </div>
+                <button onClick={()=>{
+                  const prod = { id: Date.now()+'', ...novaProducao, receitaNome: RECEITAS.find(r=>r.id===novaProducao.receitaId)?.nome, produzidas:novaProducao.qtd, vendidas:0, reservadas:0, perdidas:0 };
+                  setProducoes([prod, ...producoes]);
+                  setToast("Produção adicionada");
+                }} className="h-12 rounded-full bg-[#1A1A1A] text-white font-bold text-[13px]">Adicionar produção</button>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              {producoes.map(p=> {
+                const disp = (p.produzidas||0) - (p.vendidas||0) - (p.reservadas||0) - (p.perdidas||0);
+                return (
+                  <div key={p.id} className="bg-white rounded-[20px] p-4 border border-black/5 flex justify-between items-center">
+                    <div>
+                      <div className="font-bold text-[14px]">{p.receitaNome} • {p.qtd} un</div>
+                      <div className="text-[11px] text-black/50">{p.data} • Disp: {disp} • Vend: {p.vendidas} • Res: {p.reservadas} • Perd: {p.perdidas}</div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={()=>{ const np=producoes.map(x=> x.id===p.id ? {...x, vendidas: (x.vendidas||0)+1} : x); setProducoes(np); }} className="w-8 h-8 rounded-full bg-[#E8FFE8] text-[14px]">✔</button>
+                      <button onClick={()=>{ if(!confirm('Excluir?')) return; setProducoes(producoes.filter(x=>x.id!==p.id)); }} className="w-8 h-8 rounded-full bg-black/5">✕</button>
+                    </div>
+                  </div>
+                );
+              })}
+              {producoes.length===0 && <div className="bg-white rounded-2xl p-8 text-center text-black/40 text-[13px]">Nenhuma produção ainda</div>}
+            </div>
+          </div>
+        )}
+
+        {pagina==='vendas' && (
+          <div className="grid gap-4">
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold">Nova Venda</div>
+              <div className="mt-3 grid gap-2">
+                <input value={novaVenda.produto} onChange={e=>setNovaVenda({...novaVenda, produto:e.target.value})} placeholder="Produto" className="h-11 rounded-full px-5 bg-[#FFF9F0] border border-black/10 text-[13px]" />
+                <div className="grid grid-cols-3 gap-2">
+                  <input type="number" value={novaVenda.qtd} onChange={e=>setNovaVenda({...novaVenda, qtd:Number(e.target.value)})} placeholder="Qtd" className="h-11 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px]" />
+                  <input type="number" value={novaVenda.valor} onChange={e=>setNovaVenda({...novaVenda, valor:Number(e.target.value)})} placeholder="Valor total" className="h-11 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px]" />
+                  <select value={novaVenda.forma} onChange={e=>setNovaVenda({...novaVenda, forma:e.target.value})} className="h-11 rounded-full px-3 bg-[#FFF9F0] border border-black/10 text-[12px] font-bold">
+                    <option>Pix</option><option>Dinheiro</option><option>Cartão</option><option>Outro</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={novaVenda.cliente} onChange={e=>setNovaVenda({...novaVenda, cliente:e.target.value})} placeholder="Cliente (opcional)" className="h-11 rounded-full px-5 bg-[#FFF9F0] border border-black/10 text-[12px]" />
+                  <input type="date" value={novaVenda.data} onChange={e=>setNovaVenda({...novaVenda, data:e.target.value})} className="h-11 rounded-full px-5 bg-[#FFF9F0] border border-black/10 text-[12px]" />
+                </div>
+                <button onClick={()=>{ setVendas([{id:Date.now()+'', ...novaVenda}, ...vendas]); setToast("Venda registrada"); }} className="h-12 rounded-full bg-[#E85D26] text-white font-bold text-[13px]">Registrar venda</button>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              {vendas.map(v=>(
+                <div key={v.id} className="bg-white rounded-[20px] p-4 border border-black/5 flex justify-between">
+                  <div><div className="font-bold text-[13px]">{v.produto} • {v.qtd} un • R$ {v.valor}</div><div className="text-[11px] text-black/50">{v.cliente || 'Cliente avulso'} • {v.forma} • {v.data}</div></div>
+                  <button onClick={()=>{ if(!confirm('Excluir venda?'))return; setVendas(vendas.filter(x=>x.id!==v.id)); }} className="w-8 h-8 rounded-full bg-black/5">✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {pagina==='clientes' && (
+          <div className="grid gap-4">
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold">Novo Cliente</div>
+              <div className="mt-3 grid gap-2">
+                {[
+                  {k:'nome', p:'Nome *'},
+                  {k:'endereco', p:'Endereço *'},
+                  {k:'whatsapp', p:'WhatsApp *'},
+                  {k:'bairro', p:'Bairro'},
+                  {k:'cidade', p:'Cidade'},
+                  {k:'ref', p:'Ponto referência'},
+                  {k:'obs', p:'Observações'},
+                ].map(f=>(
+                  <input key={f.k} value={(novoCliente as any)[f.k]} onChange={e=>setNovoCliente({...novoCliente, [f.k]:e.target.value})} placeholder={f.p} className="h-11 rounded-full px-5 bg-[#FFF9F0] border border-black/10 text-[13px]" />
+                ))}
+                <button onClick={()=>{
+                  if(!novoCliente.nome || !novoCliente.endereco || !novoCliente.whatsapp){ setToast("Preencha nome, endereço e whatsapp"); return; }
+                  setClientes([{id:Date.now()+'', ...novoCliente}, ...clientes]);
+                  setNovoCliente({ nome:'', endereco:'', whatsapp:'', bairro:'', cidade:'', ref:'', obs:'' });
+                  setToast("Cliente salvo");
+                }} className="h-12 rounded-full bg-[#1A1A1A] text-white font-bold text-[13px]">Salvar cliente</button>
+              </div>
+            </div>
+
+            <input value={buscaCliente} onChange={e=>setBuscaCliente(e.target.value)} placeholder="Buscar cliente..." className="h-12 rounded-full px-5 bg-white border border-black/10 text-[14px]" />
+
+            <div className="grid gap-2">
+              {clientes.filter(c=> !buscaCliente || c.nome.toLowerCase().includes(buscaCliente.toLowerCase()) || c.whatsapp.includes(buscaCliente)).map(c=>(
+                <div key={c.id} className="bg-white rounded-[20px] p-4 border border-black/5">
+                  <div className="flex justify-between">
+                    <div><div className="font-bold text-[14px]">{c.nome}</div><div className="text-[11px] text-black/50">{c.endereco} • {c.bairro} {c.cidade}</div><div className="text-[11px] text-black/50">{c.whatsapp} • {c.ref}</div></div>
+                    <div className="flex flex-col gap-1">
+                      <button onClick={()=>window.open(`https://wa.me/55${c.whatsapp.replace(/\D/g,'')}`,'_blank')} className="w-9 h-9 rounded-full bg-[#E8FFE8] grid place-items-center">💬</button>
+                      <button onClick={()=>{ if(!confirm('Excluir cliente?'))return; setClientes(clientes.filter(x=>x.id!==c.id)); }} className="w-9 h-9 rounded-full bg-black/5">✕</button>
+                    </div>
+                  </div>
+                  {c.obs && <div className="mt-2 text-[12px] bg-[#FFF9F0] rounded-xl p-3">{c.obs}</div>}
+                  <div className="mt-2 text-[11px] text-black/40">Histórico: {vendas.filter(v=> v.cliente && c.nome.toLowerCase().includes(v.cliente.toLowerCase())).length} compras • R$ {vendas.filter(v=> v.cliente && c.nome.toLowerCase().includes(v.cliente.toLowerCase())).reduce((a,b)=>a+b.valor,0).toFixed(2)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {pagina==='compras' && (
+          <div className="grid gap-4">
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="flex justify-between items-center"><div className="font-bold">Lista de Compras</div><div className="text-[12px] font-bold">Total itens: {compras.length} • Comprados: {compras.filter(c=>c.comprado).length}</div></div>
+              <div className="mt-3 flex gap-2">
+                <input id="novoItemCompra" placeholder="Adicionar item manual..." className="flex-1 h-11 rounded-full px-5 bg-[#FFF9F0] border border-black/10 text-[13px]" onKeyDown={e=>{
+                  if(e.key==='Enter'){
+                    const el = e.target as HTMLInputElement;
+                    if(!el.value.trim()) return;
+                    setCompras([{id:Date.now()+'', nome:el.value, qtd:1, unidade:'un', comprado:false}, ...compras]);
+                    el.value='';
+                  }
+                }} />
+                <button onClick={()=>{
+                  const el = document.getElementById('novoItemCompra') as HTMLInputElement;
+                  if(!el?.value.trim()) return;
+                  setCompras([{id:Date.now()+'', nome:el.value, qtd:1, unidade:'un', comprado:false}, ...compras]);
+                  el.value='';
+                }} className="h-11 px-5 rounded-full bg-[#1A1A1A] text-white font-bold text-[12px]">Adicionar</button>
+              </div>
+              <div className="mt-4 grid gap-2">
+                {compras.map(item=>(
+                  <div key={item.id} className={`flex items-center gap-3 rounded-2xl px-4 py-3 border ${item.comprado ? 'bg-[#E8FFE8] border-green-200' : 'bg-[#FFF9F0] border-black/5'}`}>
+                    <button onClick={()=>setCompras(compras.map(c=> c.id===item.id ? {...c, comprado:!c.comprado} : c))} className={`w-6 h-6 rounded-full border-2 grid place-items-center text-[12px] ${item.comprado ? 'bg-green-600 border-green-600 text-white' : 'border-black/20'}`}>{item.comprado ? '✓' : ''}</button>
+                    <div className="flex-1">
+                      <div className={`text-[13px] font-semibold ${item.comprado ? 'line-through text-black/40' : ''}`}>{item.nome}</div>
+                      <div className="text-[11px] text-black/50">{item.qtd} {item.unidade}</div>
+                    </div>
+                    <button onClick={()=>{ if(!confirm('Excluir item?'))return; setCompras(compras.filter(c=>c.id!==item.id)); }} className="w-8 h-8 rounded-full bg-black/5 text-[12px]">✕</button>
+                  </div>
+                ))}
+                {compras.length===0 && <div className="text-center text-black/40 text-[13px] py-6">Lista vazia</div>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pagina==='config' && (
+          <div className="grid gap-4">
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold text-[18px]">Configurações</div>
+              <div className="mt-4 grid gap-4">
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold">SALGADOS POR PESSOA (PADRÃO)</span>
+                  <input type="number" value={configPorPessoa} onChange={e=>setConfigPorPessoa(Number(e.target.value)||8)} className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10" />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold">VALOR DA SUA HORA R$</span>
+                  <input type="number" value={valorHora} onChange={e=>setValorHora(Number(e.target.value))} className="h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10" />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-[11px] font-bold">MARGEM PADRÃO %</span>
+                  <input type="range" min={20} max={400} value={margem} onChange={e=>setMargem(Number(e.target.value))} className="accent-[#E85D26]" />
+                  <div className="text-[12px] font-bold">{margem}%</div>
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold">Seus dados ficam salvos no seu celular</div>
+              <div className="text-[12px] text-black/60 mt-1">Faça uma cópia de segurança e guarde em lugar seguro</div>
+              <div className="mt-4 grid gap-2">
+                <button onClick={()=>{
+                  const dados = {
+                    pedidos, favoritos, custos, producoes, vendas, clientes, compras,
+                    config: { configPorPessoa, valorHora, margem, embalagem, gas, outros },
+                    acessoLiberado
+                  };
+                  const blob = new Blob([JSON.stringify(dados)], {type:'application/json'});
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href=url; a.download=`fabrica-salgados-backup-${Date.now()}.json`; a.click();
+                  URL.revokeObjectURL(url);
+                  setToast("Cópia salva");
+                }} className="h-12 rounded-full bg-[#1A1A1A] text-white font-bold text-[12px]">Salvar cópia de segurança</button>
+
+                <label className="h-12 rounded-full border border-black/10 grid place-items-center font-bold text-[12px] cursor-pointer">
+                  Restaurar cópia
+                  <input type="file" accept="application/json" className="hidden" onChange={e=>{
+                    const file = e.target.files?.[0]; if(!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      try {
+                        const dados = JSON.parse(reader.result as string);
+                        if(dados.pedidos) setPedidos(dados.pedidos);
+                        if(dados.favoritos) setFavoritos(dados.favoritos);
+                        if(dados.custos) setCustos(dados.custos);
+                        if(dados.producoes) setProducoes(dados.producoes);
+                        if(dados.vendas) setVendas(dados.vendas);
+                        if(dados.clientes) setClientes(dados.clientes);
+                        if(dados.compras) setCompras(dados.compras);
+                        if(dados.config){
+                          setConfigPorPessoa(dados.config.configPorPessoa||8);
+                          setValorHora(dados.config.valorHora||25);
+                          setMargem(dados.config.margem||100);
+                          setEmbalagem(dados.config.embalagem||0.15);
+                          setGas(dados.config.gas||0.10);
+                          setOutros(dados.config.outros||0.05);
+                        }
+                        setToast("Cópia restaurada");
+                      } catch { setToast("Arquivo inválido"); }
+                    };
+                    reader.readAsText(file);
+                  }} />
+                </label>
+
+                <button onClick={()=>{
+                  if(!confirm("Apagar TUDO? Esta ação não pode ser desfeita.")) return;
+                  localStorage.clear();
+                  setPedidos([]); setFavoritos([]); setProducoes([]); setVendas([]); setClientes([]); setCompras([]);
+                  setAcessoLiberado(false);
+                  setToast("Tudo apagado");
+                }} className="h-12 rounded-full bg-red-50 text-red-600 border border-red-200 font-bold text-[12px]">Apagar tudo do aparelho</button>
+
+                <button onClick={()=>{ setAcessoLiberado(false); setToast("Acesso bloqueado neste aparelho"); }} className="h-12 rounded-full bg-[#FFF9F0] border border-black/10 font-bold text-[12px]">Bloquear acesso deste aparelho (teste)</button>
+              </div>
+            </div>
+
+            <div className="bg-[#1A1A1A] text-white rounded-[24px] p-5">
+              <div className="font-bold">Instalar na tela inicial</div>
+              <div className="text-[12px] text-white/60 mt-1 leading-5">No iPhone: abra no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". No Android: abra no Chrome, menu ⋮ e "Instalar aplicativo" ou "Adicionar à tela inicial".</div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-xl border-t border-black/5">
+        <div className="max-w-7xl mx-auto px-2 h-[84px] flex items-center justify-around">
+          {[
+            { id:'inicio', l:'Início', i:'🏠' },
+            { id:'receitas', l:'Receitas', i:'🥟' },
+            { id:'calculadora', l:'Calculadora', i:'🧮' },
+            { id:'financeiro', l:'Financeiro', i:'💰' },
+            { id:'mais', l:'Mais', i:'⋯' },
+          ].map(item=>(
+            <button key={item.id} onClick={()=>{ if(item.id==='mais'){ setShowMais(true);} else { setPagina(item.id as any); }}} className={`flex flex-col items-center gap-1 min-w-[56px] ${pagina===item.id ? 'text-[#E85D26]' : 'text-black/50'}`}>
+              <div className={`w-8 h-8 rounded-full grid place-items-center text-[16px] ${pagina===item.id ? 'bg-[#E85D26] text-white' : 'bg-black/5'}`}>{item.i}</div>
+              <div className="text-[10px] font-bold tracking-wide">{item.l}</div>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* Mais drawer */}
+      {showMais && (
+        <div className="fixed inset-0 z-40">
+          <div className="absolute inset-0 bg-black/40" onClick={()=>setShowMais(false)}></div>
+          <div className="absolute bottom-[84px] left-0 right-0 bg-white rounded-t-[28px] p-5 max-w-7xl mx-auto border-t border-black/5 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]">
+            <div className="w-10 h-1.5 rounded-full bg-black/10 mx-auto mb-4"></div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id:'producao', l:'Produção', d:`${producoes.length} lotes`, e:'👨‍🍳' },
+                { id:'vendas', l:'Vendas', d:`${vendas.length} vendas`, e:'🧾' },
+                { id:'clientes', l:'Clientes', d:`${clientes.length} clientes`, e:'👥' },
+                { id:'compras', l:'Compras', d:`${compras.length} itens`, e:'🛒' },
+                { id:'config', l:'Configurações', d:'Ajustes e cópia', e:'⚙️' },
+              ].map(c=>(
+                <button key={c.id} onClick={()=>{ setPagina(c.id as any); setShowMais(false); }} className="text-left bg-[#FFF9F0] rounded-2xl p-4 border border-black/5">
+                  <div className="text-[20px]">{c.e}</div>
+                  <div className="font-bold text-[13px] mt-1">{c.l}</div>
+                  <div className="text-[11px] text-black/50">{c.d}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receita modal */}
+      {receitaSelecionada && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#FFF9F0]">
+          <div className="sticky top-0 z-10 bg-[#FFF9F0]/90 backdrop-blur-xl border-b border-black/5">
+            <div className="max-w-7xl mx-auto px-4 h-[64px] flex items-center justify-between">
+              <button onClick={()=>setReceitaSelecionada(null)} className="w-10 h-10 rounded-full bg-white border border-black/10 grid place-items-center">←</button>
+              <div className="font-bold text-[14px] truncate max-w-[200px]">{receitaSelecionada.nome}</div>
+              <button onClick={()=>{ setFavoritos(f=> f.includes(receitaSelecionada.id) ? f.filter(x=>x!==receitaSelecionada.id) : [...f, receitaSelecionada.id])}} className={`w-10 h-10 rounded-full grid place-items-center border ${favoritos.includes(receitaSelecionada.id) ? 'bg-[#E85D26] text-white border-[#E85D26]' : 'bg-white border-black/10'}`}>♥</button>
+            </div>
+          </div>
+          <div className="max-w-3xl mx-auto px-4 pb-20 pt-4 grid gap-4">
+            <div className={`h-[180px] rounded-[28px] bg-gradient-to-br ${receitaSelecionada.gradiente} grid place-items-center text-[64px] relative overflow-hidden`}>
+              <span>{receitaSelecionada.emoji}</span>
+              <div className="absolute bottom-3 left-3 right-3 flex gap-2">
+                <div className="px-3 py-1 rounded-full bg-black text-white text-[11px] font-bold">{receitaSelecionada.categoria}</div>
+                <div className="px-3 py-1 rounded-full bg-white text-black text-[11px] font-bold">{receitaSelecionada.tipo}</div>
+                {receitaSelecionada.vegetariano && <div className="px-3 py-1 rounded-full bg-green-600 text-white text-[11px] font-bold">Veg</div>}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-display font-bold text-[22px]">{receitaSelecionada.nome}</div>
+              <div className="text-[13px] text-black/60 mt-1">{receitaSelecionada.descricao}</div>
+              <div className="mt-3 flex gap-2">
+                <div className="px-3 py-1 rounded-full bg-[#FFF9F0] border border-black/5 text-[11px] font-bold">{receitaSelecionada.rendimento} unidades</div>
+                <div className="px-3 py-1 rounded-full bg-[#FFF9F0] border border-black/5 text-[11px] font-bold">{receitaSelecionada.tempo}</div>
+                <div className="px-3 py-1 rounded-full bg-[#FFF9F0] border border-black/5 text-[11px] font-bold">{receitaSelecionada.dificuldade}</div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[24px] p-5 border border-black/5">
+              <div className="font-bold">Ingredientes</div>
+              <div className="mt-3 grid gap-2">
+                {receitaSelecionada.ingredientes.map((ing,i)=>(
+                  <div key={i} className="flex justify-between bg-[#FFF9F0] rounded-xl px-4 py-2.5 text-[13px]"><span className="font-semibold">{ing.nome}</span><span className="text-black/60">{ing.qtd}{ing.unidade} • {ing.categoria}</span></div>
+                ))}
+              </div>
+            </div>
+
+            {[
+              { t:'Modo de preparo (5 passos)', c: receitaSelecionada.modoPreparo },
+              { t:'Montagem', c: [receitaSelecionada.montagem] },
+              { t: receitaSelecionada.tipo==='frito' ? 'Fritura' : 'Forno', c: [receitaSelecionada.fritura] },
+              { t:'Dicas de produção', c: [receitaSelecionada.dicasProducao] },
+              { t:'Dicas de venda', c: [receitaSelecionada.dicasVenda] },
+              { t:'Conservação e validade', c: [receitaSelecionada.conservacao, receitaSelecionada.validade] },
+            ].map(sec=>(
+              <div key={sec.t} className="bg-white rounded-[24px] p-5 border border-black/5">
+                <div className="font-bold text-[14px]">{sec.t}</div>
+                <div className="mt-2 grid gap-2">
+                  {sec.c.map((s, i)=><div key={i} className="text-[13px] leading-6 text-black/70 bg-[#FFF9F0] rounded-xl px-4 py-2.5">{i+1}. {s}</div>)}
+                </div>
+              </div>
+            ))}
+
+            <button onClick={()=>{
+              setCalcReceitaId(receitaSelecionada.id);
+              setReceitaSelecionada(null);
+              setPagina('calculadora');
+              window.scrollTo({top:0, behavior:'smooth'});
+            }} className="w-full h-[56px] rounded-full bg-[#1A1A1A] text-white font-bold text-[14px]">Calcular esta receita</button>
+          </div>
+        </div>
+      )}
+
+      {/* ADM senha modal (quando já liberado, ainda permite) */}
+      {showAdmSenha && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm grid place-items-center p-4">
+          <div className="bg-white rounded-[24px] w-full max-w-[360px] p-6 shadow-2xl">
+            <div className="font-display font-bold text-[20px]">Acesso Restrito</div>
+            <div className="text-[13px] text-black/60 mt-1">Área administrativa • Digite a senha</div>
+            <input autoFocus type="password" value={senhaInput} onChange={e=>setSenhaInput(e.target.value)} placeholder="Senha" className="mt-4 w-full h-12 rounded-full px-5 bg-[#FFF9F0] border border-black/10 outline-none focus:border-[#1A1A1A]" onKeyDown={e=> e.key==='Enter' && verificarSenha()} />
+            <div className="mt-4 flex gap-3">
+              <button onClick={()=>{setShowAdmSenha(false); setSenhaInput("");}} className="flex-1 h-12 rounded-full border border-black/10 font-bold text-[13px]">Cancelar</button>
+              <button onClick={verificarSenha} className="flex-1 h-12 rounded-full bg-[#1A1A1A] text-white font-bold text-[13px]">Entrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && <div className="fixed bottom-[96px] left-1/2 -translate-x-1/2 bg-[#1A1A1A] text-white px-5 py-3 rounded-full text-[13px] font-semibold shadow-xl z-50 max-w-[90%] text-center">{toast}</div>}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App));
+</script>
+
+<script>
+// PWA Service Worker registration
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
